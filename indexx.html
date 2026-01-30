@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compatibility Check</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #423a35;
+      --card: #948a7d;
+      --primary: #423a35;
+      --secondary: #6b625a;
+      --text: #2f2a26;
+      --muted: #5f564f;
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: radial-gradient(circle at top, rgba(255,255,255,0.03), transparent 60%), #423a35;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 520px;
+      padding: 24px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 32px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 2rem;
+      line-height: 1.2;
+    }
+
+    p {
+      line-height: 1.6;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 20px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: #f3f1ed;
+      margin-top: 24px;
+    }
+
+    .answers {
+      display: grid;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .answer {
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.20);
+      cursor: pointer;
+    }
+
+    .answer:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: var(--primary);
+    }
+
+    .progress {
+      margin-bottom: 20px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .start { text-align: center; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="card" id="card"></div>
+  </div>
+
+<script>
+const questions = [
+  { id: "q1", text: "Do you hate Sombra mains? (If you do, I will assume you are peak gold, weak, and feeble)", answers: ["Yes", "No"] },
+  { id: "q2", text: "Will you be butthurt if I topfrag you?", answers: ["Yes", "No"] },
+  { id: "q3", text: "Do you support Israel?", answers: ["Yes", "No"] },
+  { id: "q4", text: "Are you an eboy/egirl/ewhore?", answers: ["Yes", "No"] },
+  { id: "q5", text: "Are you specifically looking for a mercy pocket?", answers: ["Yes", "No"] },
+  { id: "q6", text: "Do you intend to flirt with me?", answers: ["Yes", "No"] },
+  { id: "q7", text: "Are you into cringe gen-z humour or ragebaiting, either ironically or unironically?", answers: ["Yes", "No"] },
+  { id: "q8", text: "Do you like banter? (No sensitive sallys)", answers: ["Yes/I dont mind", "No"] },
+  { id: "q9", text: "Are you willing to avoid (most) small talk?", answers: ["Yes", "No"] },
+  { id: "q10", text: "Do you mind if I talk to or flirt with randoms in match chat?", answers: ["Yes", "No"] }
+];
+
+let current = 0;
+const userAnswers = {};
+const card = document.getElementById("card");
+
+function renderStart() {
+  card.innerHTML = `
+    <div class="start">
+      <h1>Are we compatible?</h1>
+      <p>Let's find out if we're meant to be a duo.</p>
+      <button class="btn" onclick="startQuiz()">Start</button>
+    </div>
+  `;
+}
+
+function startQuiz() {
+  current = 0;
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = questions[current];
+
+  card.innerHTML = `
+    <div class="progress">Question ${current + 1} of ${questions.length}</div>
+    <h1>${q.text}</h1>
+    <div class="answers">
+      ${q.answers.map((a, i) => `<div class="answer" data-index="${i}">${a}</div>`).join("")}
+    </div>
+  `;
+
+  document.querySelectorAll(".answer").forEach(el => {
+    el.onclick = () => selectAnswer(q.id, Number(el.dataset.index));
+  });
+}
+
+function selectAnswer(id, index) {
+  userAnswers[id] = index;
+  current++;
+
+  if (current < questions.length) {
+    renderQuestion();
+  } else {
+    submitToBackend();
+  }
+}
+
+function submitToBackend() {
+  card.innerHTML = `<p>Calculating...</p>`;
+
+  fetch("/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(userAnswers)
+  })
+    .then(res => res.json())
+    .then(showResult)
+    .catch(() => {
+      card.innerHTML = `<p>The password is perdu.</p>`;
+    });
+}
+
+function showResult(data) {
+  if (data.result === "pass") {
+    card.innerHTML = `
+      <h1>Yippee!! You're the goat!</h1>
+      <p>The password is <strong>${data.password}</strong>.</p>
+    `;
+  } else {
+    card.innerHTML = `
+      <h1>Okay!</h1>
+      <p>The password is <strong>${data.password}</strong>.</p>
+    `;
+  }
+}
+
+renderStart();
+</script>
+</body>
+</html>
